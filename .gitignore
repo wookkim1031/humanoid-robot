@@ -1,5 +1,14 @@
 data/
 outputs/
 wandb/
-*.pt, 
-*.pkl,
+*.pt
+*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Poetry / virtualenvs
+.venv/
