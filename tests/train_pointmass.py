@@ -7,8 +7,8 @@ Pass criteria (checked at the end):
 """
 import time
 import torch
-from pointmass_env import PointMassEnv
-from zshumanoid.ppo import PPOModel, PPOConfig
+from tests.pointmass_env import PointMassEnv
+from src.zshumanoid.ppo import PPOModel, PPOConfig
 
 torch.manual_seed(0)
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -39,7 +39,7 @@ for it in range(300):
     if it % 30 == 0 and history:
         ret, dist = history[-1]
         print(f"iter {it:4d} | ep_ret {ret:7.2f} | final_dist {dist:.3f} | "
-              f"kl {stats['approx_kl']:.4f} | clip {stats['clip_frac']:.2f} | "
+              f"kl {stats['approx_kl']:.4f} | "
               f"ent {stats['entropy']:.2f}")
 
 elapsed = time.time() - t0

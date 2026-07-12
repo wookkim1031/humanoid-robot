@@ -9,7 +9,7 @@ DATA="${DATA_DIR:-/workspace/data}/$RUN"
 RUNS="${RUNS_DIR:-/workspace/runs}/$RUN"
 mkdir -p "$DATA" "$RUNS"
 
-bash scripts/download_models.sh
+bash src/shell/download_models.sh
 
 echo "=== [1/5] GENMO: video -> smpl_params.pt"
 /venvs/genmo/bin/python third_party/GENMO/demo_smpl.py \
@@ -17,7 +17,7 @@ echo "=== [1/5] GENMO: video -> smpl_params.pt"
     --checkpoint "$MODELS_DIR/genmo/genmo_release.ckpt"
 
 echo "=== [2/5] adapt GENMO -> GVHMR-style .pt (GMR input)"
-/venvs/genmo/bin/python scripts/adapt_genmo_to_gmr.py \
+/venvs/genmo/bin/python tools/adapt_genmo_to_gmr.py \
     --genmo "$DATA/smpl_params.pt" --out "$DATA/genmo_gvhmr_style.pt" \
     --frame global
 
@@ -29,7 +29,7 @@ echo "=== [3/5] GMR: retarget -> G1 pkl"
     --save_path "$DATA/motion_g1.pkl"
 
 echo "=== [4/5] pkl -> csv -> npz (50 Hz)"
-/venvs/gmr/bin/python scripts/gmr_pkl_to_csv.py \
+/venvs/gmr/bin/python tools/gmr_pkl_to_csv.py \
     "$DATA/motion_g1.pkl" "$DATA/motion_g1.csv"
 /venvs/mjlab/bin/python -m mjlab.scripts.csv_to_npz \
     --input-file "$DATA/motion_g1.csv" \

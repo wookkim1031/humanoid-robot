@@ -4,7 +4,7 @@ MODELS_DIR="${MODELS_DIR:-/workspace/models}"
 mkdir -p "$MODELS_DIR"
 
 
-if [! -f "$MODELS_DIR/simplx/SMPL_X_NEUTRAL.npz" ]; then 
+if [ ! -f "$MODELS_DIR/simplx/SMPL_X_NEUTRAL.npz" ]; then 
     echo "[models] fetching SMPL-X from private HF mirror"
     mkdir -p "$MODELS_DIR/smplx"
     /venvs/genmo/bin/python - <<'PY'
@@ -13,7 +13,7 @@ from huggingface_hub import hf_hub_download
 p = hf_hub_download(
     repo_id="johan1031/smpl",
     filename="SMPLX_NEUTRAL.npz", 
-    local_dir=os.environ["MODELS_DIR] + "/smplx",
+    local_dir=os.environ.get("MODELS_DIR", "/workspace/models") + "/smplx",
     token=os.environ["HF_TOKEN"],
 )
 print("download:", p)

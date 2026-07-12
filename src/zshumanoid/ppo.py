@@ -302,10 +302,10 @@ class PPOModel:
                 nn.utils.clip_grad_norm_(self.actor.parameters(), cfg.max_grad_norm)
                 self.actor_opt.step()
 
-                v_loss = (self.critic(c_obs[b]) - ret[b]).pow(2).mean
+                v_loss = (self.critic(c_obs[b]) - ret[b]).pow(2).mean()
                 self.critic_opt.zero_grad()
                 v_loss.backward()
-                nn.utils.clip_grad_norm_(self.critic_parameters(), cfg.max_grad_norm)
+                nn.utils.clip_grad_norm_(self.critic.parameters(), cfg.max_grad_norm)
                 self.critic_opt.step()
 
                 with torch.no_grad():
