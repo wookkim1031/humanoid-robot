@@ -9,7 +9,7 @@ DATA="${DATA_DIR:-/workspace/data}/$RUN"
 RUNS="${RUNS_DIR:-/workspace/runs}/$RUN"
 mkdir -p "$DATA" "$RUNS"
 
-bash src/shell/download_models.sh
+bash src/shell/download_model.sh
 
 echo "=== [1/5] GENMO: video -> smpl_params.pt"
 /venvs/genmo/bin/python third_party/GENMO/demo_smpl.py \

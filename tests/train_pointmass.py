@@ -7,8 +7,8 @@ Pass criteria (checked at the end):
 """
 import time
 import torch
-from tests.pointmass_env import PointMassEnv
-from src.zshumanoid.ppo import PPOModel, PPOConfig
+from pointmass_env import PointMassEnv
+from zshumanoid.ppo import PPOModel, PPOConfig
 
 torch.manual_seed(0)
 device = "cuda:0" if torch.cuda.is_available() else "cpu"

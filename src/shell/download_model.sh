@@ -4,7 +4,7 @@ MODELS_DIR="${MODELS_DIR:-/workspace/models}"
 mkdir -p "$MODELS_DIR"
 
 
-if [ ! -f "$MODELS_DIR/simplx/SMPL_X_NEUTRAL.npz" ]; then 
+if [ ! -f "$MODELS_DIR/smplx/SMPL_X_NEUTRAL.npz" ]; then 
     echo "[models] fetching SMPL-X from private HF mirror"
     mkdir -p "$MODELS_DIR/smplx"
     /venvs/genmo/bin/python - <<'PY'
