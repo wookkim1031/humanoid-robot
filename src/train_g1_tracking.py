@@ -93,7 +93,7 @@ def main():
                     agg[k].append(float(v) if not torch.is_tensor(v) else v.item())
             fps = (it + 1) * cfg.horizon * env.num_envs / (time.time() - t0)
             line = f"it {it:6d} | fps {fps:9.0f} | kl {stats['approx_kl']:.4f} " \
-                   f"| clip {stats['clip_frac']:.2f} | ent {stats['entropy']:.1f}"
+                   f"| ent {stats['entropy']:.1f}"
             for k in sorted(agg):
                 if "error" in k or "Reward" in k:
                     line += f" | {k.split('/')[-1]} {sum(agg[k])/len(agg[k]):.3f}"

@@ -25,7 +25,7 @@ fi
 
 # GEM
 if [ ! -f "$MODELS_DIR/gem/gem_smpl.ckpt" ]; then
-  echo "[models] fetching GEM-X checkpoints (~12 GB, one-time)"
+  echo "[models] fetching GEM-X checkpoints (~5.5 GB, one-time)"
   "$PY" - <<'PY'
 import os
 from huggingface_hub import snapshot_download
