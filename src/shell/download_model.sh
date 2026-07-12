@@ -1,13 +1,14 @@
 set -euo pipefail
 
-MODELS_DIR="${MODELS_DIR:-/workspace/models}"
+export MODELS_DIR="${MODELS_DIR:-/workspace/models}"
+PY="${PY:-python3}"
 mkdir -p "$MODELS_DIR"
 
 
-if [ ! -f "$MODELS_DIR/smplx/SMPL_X_NEUTRAL.npz" ]; then 
+if [ ! -f "$MODELS_DIR/smplx/SMPLX_NEUTRAL.npz" ]; then
     echo "[models] fetching SMPL-X from private HF mirror"
     mkdir -p "$MODELS_DIR/smplx"
-    /venvs/genmo/bin/python - <<'PY'
+    "$PY" - <<'PY'
 import os 
 from huggingface_hub import hf_hub_download
 p = hf_hub_download(
@@ -23,10 +24,9 @@ else
 fi
 
 # GEM
-GEM_DIR="$MODELS_DIR/gem"
-if [ ! -f "$GEM_DIR/gem_smpl.ckpt" ]; then
+if [ ! -f "$MODELS_DIR/gem/gem_smpl.ckpt" ]; then
   echo "[models] fetching GEM-X checkpoints (~12 GB, one-time)"
-  /venvs/genmo/bin/python - <<'PY'
+  "$PY" - <<'PY'
 import os
 from huggingface_hub import snapshot_download
 p = snapshot_download(
@@ -43,4 +43,28 @@ PY
 else
   echo "[models] GEM-X: cached"
 fi
+
+# ------------------------------------- HMR2 + ViTPose (GEM demo prereqs) --
+# Expected mirror layout: hmr2/epoch=10-step=25000.ckpt and
+# vitpose/vitpose-h-multi-coco.pth. If your HF repo stores them elsewhere,
+# adjust the two specs below (check with HfApi().list_repo_files).
+for spec in "hmr2/epoch=10-step=25000.ckpt" "vitpose/vitpose-h-multi-coco.pth"; do
+  if [ ! -f "$MODELS_DIR/$spec" ]; then
+    echo "[models] fetching $spec from private HF mirror"
+    SPEC="$spec" "$PY" - <<'PY'
+import os
+from huggingface_hub import hf_hub_download
+p = hf_hub_download(
+    repo_id="johan1031/smpl",
+    filename=os.environ["SPEC"],
+    local_dir=os.environ["MODELS_DIR"],
+    token=os.environ["HF_TOKEN"],
+)
+print("downloaded:", p)
+PY
+  else
+    echo "[models] $spec: cached"
+  fi
+done
+
 echo "[models] all weights present on volume."
