@@ -1,1 +1,0 @@
-# load/query manifest: clip id, text, files, split

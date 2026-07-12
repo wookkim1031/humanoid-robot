@@ -1,1 +1,0 @@
-# SMPL-X → G1, thin wrapper over third_party/GMR

@@ -1,1 +1,0 @@
-# verify → fallback / replan loop

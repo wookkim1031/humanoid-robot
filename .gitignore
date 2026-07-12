@@ -12,3 +12,6 @@ __pycache__/
 
 # Poetry / virtualenvs
 .venv/
+models/
+*.ckpt
+*.npz
