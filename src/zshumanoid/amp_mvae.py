@@ -114,20 +114,29 @@ class PPOAMP(PPOModel):
             next_obs, rew, terminated, truncated, extras = self.env.step(action)
             done = (terminated | truncated).float()
 
-            amp_now = extras["amp_obs"]  # (N,65)
+            amp_now = extras.get("amp_obs")
+            if amp_now is None:       
+                if not getattr(self, "_warned_amp_fallback", False):
+                    print("[AMP] extras has no 'amp_obs' — using amp_features fallback. "
+                        f"extras keys: {list(extras.keys())}")
+                    self._warned_amp_fallback = True             # unwrapped env (stage 1)
+                amp_now = amp_features(self.env)   # (N, 65)
             """
             Original AMP paper takes two frames as a sweet spot. 
             Feature dimensions grow linearly, the discriminator gets easier to overfit. 
             """
             if self._prev_amp is not None: 
                 trans = torch.cat([self._prev_amp, amp_now], -1) # (N,130)
-                style = self.disc.style_reward(trans)
-                # rew here is what the mjlab's tracking task computes - the Deepmimic style imitation reward 
+                valid = ~done.bool()
+                style = torch.zeros_like(rew)
+                if valid.any():
+                    style[valid] = self.disc.style_reward(trans[valid])
                 rew = self.amp_cfg.w_task * rew + self.amp_cfg.w_style * style
-                self._policy_trans.append(trans)
+                self._policy_trans.append(trans[valid])
+            else:
+                rew = self.amp_cfg.w_task * rew
             #transition across a reset are invalid: 
             self._prev_amp = amp_now.clone()
-            self._prev_amp[done.bool()] = float("nan")
 
             """
             AMP reward combine with the timeout bootstrap
@@ -141,7 +150,12 @@ class PPOAMP(PPOModel):
         last_values = self.critic(self._norm(self.critic_rms, self._obs["critic"]))
         self.buf.compute_gae(self.cfg.gamma, self.cfg.lam, last_values)
         return ep_stats
-
+    
+    def update(self):
+        stats = super().update()
+        stats.update(self.update_disc())
+        return stats
+    
     def update_disc(self):
         if not self._policy_trans:
             return {}
@@ -287,6 +301,15 @@ def train_mvae(model: MotionVAE, clips: list[torch.Tensor], epochs=100,
                   f"| p_own {p_own:.2f}")
     return hist
 
+def amp_features(env) -> torch.Tensor: 
+    d = env.scene["robot"].data
+    return torch.cat([
+        d.joint_pos,        # absolute, NOT joint_pos_rel
+        d.joint_vel,
+        d.root_link_pos_w[:, 2:3],
+        d.root_link_lin_vel_b, 
+        d.root_link_ang_vel_b,
+    ], dim=1)               # (N, 65)
 # ---------------------------------------------------- latent space PPO === 
 
 class LatentActionWrapper: 
@@ -321,8 +344,11 @@ class LatentActionWrapper:
         obs, rew, term, trunc, extras = self.env.step(x[:, self.joint_slice])
         # next conditioning = the env's. REAL resulting feature 
         # (closes the loop, prevents decoder drift): env must expose it in extras["amp_obs"]
-        self._x_prev = extras["amp_obs"]
+        amp_now = amp_features(self.env)
+        extras["amp_obs"] = amp_now
+        self._x_prev = amp_now.clone()
         done = term | trunc
         if done.any(): 
             self._x_prev[done] = 0.0
         return obs, rew, term, trunc, extras
+    

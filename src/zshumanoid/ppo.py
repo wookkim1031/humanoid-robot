@@ -28,6 +28,10 @@ class PPOConfig:
     vf_coef: float = 0.5
     max_grad_norm: float = 1.0
     normalize_obs: bool = True
+    desired_kl: float = 0.01
+    kl_adapt: bool = True
+    lr_min: float = 1e-5
+    lr_max: float = 1e-2
 
     # Networks
     actor_hidden: tuple = (512, 256, 128)
@@ -53,6 +57,7 @@ class Actor(nn.Module):
     mean_net: outputs shape (N,A): one mean per action dimension per env
     log_std: log of the standard deviation
     """
+    
     def __init__(self, obs_dim: int, act_dim:int, hidden: tuple = (512,256,128),
                  init_log_std: float=-1.0):
         super().__init__()
@@ -211,6 +216,8 @@ class PPOModel:
                                  critic_obs_dim, act_dim, device)
         self.actor_rms = RunningMeanStd(actor_obs_dim, device) if cfg.normalize_obs else None
         self.critic_rms = RunningMeanStd(critic_obs_dim, device) if cfg.normalize_obs else None
+        self.actor_lr = cfg.actor_lr
+        self.critic_lr = cfg.critic_lr
 
         obs, _ = env.reset()
         self._obs = obs
@@ -275,7 +282,8 @@ class PPOModel:
 
         n = a_obs.shape[0]
         mb = max(1, n // cfg.num_minibatches)
-        pi_l = v_l = ent_l = kl = 0.0 
+        pi_l = v_l = ent_l = kl = 0.0
+        n_mb = 0
         
         """
         new_logp: log probability of old actions under new policy 
@@ -309,10 +317,25 @@ class PPOModel:
                 self.critic_opt.step()
 
                 with torch.no_grad():
-                    kl = ((ratio - 1) - ratio.log()).mean().item()
-                pi_l, v_l, ent_l = pi_loss.item(), v_loss.item(), ent.item()
+                    kl += ((ratio - 1) - ratio.log()).mean().item()
+                pi_l += pi_loss.item(); v_l += v_loss.item(); ent_l += ent.item()
+                n_mb += 1
 
-        return {"pi_loss": pi_l, "v_loss": v_l, "entropy": ent_l, "approx_kl": kl}
+        kl_mean = kl / max(1, n_mb)
+        if cfg.kl_adapt:
+            if kl_mean > 2.0 * cfg.desired_kl:
+                scale = 1 / 1.5
+            elif 0.0 < kl_mean < 0.5 * cfg.desired_kl:
+                scale = 1.5
+            else:
+                scale = 1.0
+            if scale != 1.0:
+                self.actor_lr = min(cfg.lr_max, max(cfg.lr_min, self.actor_lr * scale))
+                self.critic_lr = min(cfg.lr_max, max(cfg.lr_min, self.critic_lr * scale))
+                for g in self.actor_opt.param_groups:  g["lr"] = self.actor_lr
+                for g in self.critic_opt.param_groups: g["lr"] = self.critic_lr
+
+        return {"pi_loss": pi_l, "v_loss": v_l, "entropy": ent_l, "approx_kl": kl, "lr": self.actor_lr}
 
     # ---------------------------------------------------------------------------------- train
     def train(self, iterations: int, log_every: int = 10): 
